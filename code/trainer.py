@@ -1,5 +1,5 @@
 from __future__ import print_function
-from six.moves import range
+#from six.moves import range
 
 import torch
 import torch.nn as nn
@@ -50,7 +50,7 @@ class condGANTrainer(object):
         if cfg.TRAIN.NET_E == '':
             print('Error: no pretrained text-image encoders')
             return
-
+        print("train_net_E", cfg.TRAIN.NET_E)
         image_encoder = CNN_ENCODER(cfg.TEXT.EMBEDDING_DIM)
         img_encoder_path = cfg.TRAIN.NET_E.replace('text_encoder', 'image_encoder')
         state_dict = \
@@ -230,11 +230,14 @@ class condGANTrainer(object):
 
         gen_iterations = 0
         # gen_iterations = start_epoch * self.num_batches
+
+        
         for epoch in range(start_epoch, self.max_epoch):
             start_t = time.time()
 
             data_iter = iter(self.data_loader)
             step = 0
+            
             while step < self.num_batches:
                 # reset requires_grad to be trainable for all Ds
                 # self.set_requires_grad_value(netsD, True)
@@ -254,13 +257,13 @@ class condGANTrainer(object):
                 num_words = words_embs.size(2)
                 if mask.size(1) > num_words:
                     mask = mask[:, :num_words]
-
+                
                 #######################################################
                 # (2) Generate fake images
                 ######################################################
                 noise.data.normal_(0, 1)
                 fake_imgs, _, mu, logvar = netG(noise, sent_emb, words_embs, mask)
-
+                
                 #######################################################
                 # (3) Update D network
                 ######################################################
@@ -274,15 +277,16 @@ class condGANTrainer(object):
                     errD.backward()
                     optimizersD[i].step()
                     errD_total += errD
-                    D_logs += 'errD%d: %.2f ' % (i, errD.data[0])
-
+                    D_logs += 'errD%d: %.2f ' % (i, errD.data.item())
+                    #D_logs += 'errD%d: %.2f ' % (i, errD.data[0])
+                
                 #######################################################
                 # (4) Update G network: maximize log(D(G(z)))
                 ######################################################
                 # compute total loss for training G
                 step += 1
                 gen_iterations += 1
-
+                
                 # do not need to compute gradient for Ds
                 # self.set_requires_grad_value(netsD, False)
                 netG.zero_grad()
@@ -291,8 +295,10 @@ class condGANTrainer(object):
                                    words_embs, sent_emb, match_labels, cap_lens, class_ids)
                 kl_loss = KL_loss(mu, logvar)
                 errG_total += kl_loss
-                G_logs += 'kl_loss: %.2f ' % kl_loss.data[0]
+                #G_logs += 'kl_loss: %.2f ' % kl_loss.data[0]
+                G_logs += 'kl_loss: %.2f ' % kl_loss.data.item()
                 # backward and update parameters
+                print("debug: backward start")
                 errG_total.backward()
                 optimizerG.step()
                 for p, avg_p in zip(netG.parameters(), avg_param_G):
@@ -313,12 +319,13 @@ class condGANTrainer(object):
                     #                       words_embs, mask, image_encoder,
                     #                       captions, cap_lens,
                     #                       epoch, name='current')
+                
             end_t = time.time()
 
             print('''[%d/%d][%d]
                   Loss_D: %.2f Loss_G: %.2f Time: %.2fs'''
                   % (epoch, self.max_epoch, self.num_batches,
-                     errD_total.data[0], errG_total.data[0],
+                     errD_total.data.item(), errG_total.data.item(),
                      end_t - start_t))
 
             if epoch % cfg.TRAIN.SNAPSHOT_INTERVAL == 0:  # and epoch != 0:

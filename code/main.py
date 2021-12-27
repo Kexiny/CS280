@@ -19,14 +19,12 @@ import torchvision.transforms as transforms
 
 dir_path = (os.path.abspath(os.path.join(os.path.realpath(__file__), './.')))
 sys.path.append(dir_path)
-
-
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a AttnGAN network')
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file',
-                        default='cfg/bird_attn2.yml', type=str)
-    parser.add_argument('--gpu', dest='gpu_id', type=int, default=-1)
+                        default='code/cfg/bird_attn2.yml', type=str)
+    parser.add_argument('--gpu', dest='gpu_id', type=int, default=0)
     parser.add_argument('--data_dir', dest='data_dir', type=str, default='')
     parser.add_argument('--manualSeed', type=int, help='manual seed')
     args = parser.parse_args()
@@ -121,7 +119,7 @@ if __name__ == "__main__":
     # Get data loader
     imsize = cfg.TREE.BASE_SIZE * (2 ** (cfg.TREE.BRANCH_NUM - 1))
     image_transform = transforms.Compose([
-        transforms.Scale(int(imsize * 76 / 64)),
+        transforms.Resize(int(imsize * 76 / 64)),
         transforms.RandomCrop(imsize),
         transforms.RandomHorizontalFlip()])
     dataset = TextDataset(cfg.DATA_DIR, split_dir,
